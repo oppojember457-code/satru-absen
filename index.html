@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Satru Absen — Absensi Santri</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f4f7f5;color:#17211b}
+header{background:#126b3a;color:#fff;padding:18px}.wrap{max-width:1000px;margin:auto;padding:16px}
+h1,h2{margin:0 0 8px}.sub{opacity:.85}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:14px 0}
+.card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 3px 15px #00000012}
+.stat{font-size:28px;font-weight:700}.muted{color:#6b746e;font-size:13px}
+select,input,button{width:100%;padding:12px;border:1px solid #d6ddd8;border-radius:10px;font-size:15px}
+button{background:#126b3a;color:#fff;border:0;font-weight:700;cursor:pointer}.btn2{background:#eef5f0;color:#126b3a}.danger{background:#b3261e}.row{display:flex;gap:8px}.row>*{flex:1}
+table{width:100%;border-collapse:collapse;margin-top:10px}th,td{padding:10px;border-bottom:1px solid #eee;text-align:left;font-size:14px}
+.badge{padding:5px 8px;border-radius:99px;font-size:12px;font-weight:700}.Hadir{background:#ddf5e6;color:#087b39}.Izin{background:#fff0c7;color:#8a5a00}.Sakit{background:#dcecff;color:#145aa5}.Alpa{background:#ffe0df;color:#a5221c}.Belum{background:#eee;color:#666}
+.hidden{display:none}.notice{padding:10px;background:#fff7d6;border-radius:10px;margin:10px 0}
+@media(max-width:600px){.row{flex-direction:column}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<h1>Satru Absen</h1><div class="sub">Prototype Absensi Kegiatan Santri</div>
+</div></header>
+
+<main class="wrap">
+<div class="grid">
+<div class="card"><div class="muted">Total Santri</div><div class="stat" id="total">0</div></div>
+<div class="card"><div class="muted">Hadir</div><div class="stat" id="hadir">0</div></div>
+<div class="card"><div class="muted">Sakit</div><div class="stat" id="sakit">0</div></div>
+<div class="card"><div class="muted">Izin</div><div class="stat" id="izin">0</div></div>
+<div class="card"><div class="muted">Alpa</div><div class="stat" id="alpa">0</div></div>
+</div>
+
+<div class="card">
+<h2>1. Pilih Kegiatan</h2>
+<div class="grid">
+<select id="kegiatan">
+<option>Pengajian Ba'da Maghrib</option>
+<option>Madrasah Diniyah</option>
+<option>Jamaah</option>
+<option>Muhadharah</option>
+</select>
+<input id="tanggal" type="date">
+</div>
+<div class="notice">Prototype ini menyimpan data di browser perangkat. Cocok untuk uji coba sebelum memakai database online.</div>
+</div>
+
+<div class="card">
+<h2>2. Absensi</h2>
+<p class="muted">Untuk prototype, masukkan ID pada kartu santri. Nanti bagian ini bisa diganti menjadi scan QR kamera.</p>
+<div class="row">
+<input id="scan" placeholder="Contoh ID: RU001" autofocus>
+<button onclick="scanSantri()">SCAN / ABSEN</button>
+</div>
+<p id="msg"></p>
+</div>
+
+<div class="card">
+<h2>3. Daftar Kehadiran</h2>
+<input id="cari" placeholder="Cari nama atau ID..." oninput="render()">
+<table><thead><tr><th>Santri</th><th>Kelas</th><th>Status</th><th>Aksi</th></tr></thead>
+<tbody id="list"></tbody></table>
+</div>
+
+<div class="card">
+<h2>4. Kelola Sakit / Izin</h2>
+<p class="muted">Santri yang belum scan bisa diberi status Sakit atau Izin. Setelah kegiatan ditutup, sisanya dapat ditetapkan Alpa.</p>
+<div class="row">
+<button class="btn2" onclick="setUnscanned('Sakit')">Tandai Semua Belum Scan → Sakit</button>
+<button class="btn2" onclick="setUnscanned('Izin')">Tandai Semua Belum Scan → Izin</button>
+<button class="danger" onclick="setUnscanned('Alpa')">Tandai Semua Belum Scan → Alpa</button>
+</div>
+</div>
+</main>
+
+<script>
+const santri=[
+{id:"RU001",nama:"Ahmad Fauzan",kelas:"1 Wustha"},
+{id:"RU002",nama:"Muhammad Rizki",kelas:"1 Wustha"},
+{id:"RU003",nama:"Abdul Aziz",kelas:"2 Wustha"},
+{id:"RU004",nama:"Hasan Basri",kelas:"2 Wustha"},
+{id:"RU005",nama:"Ali Mustofa",kelas:"3 Wustha"},
+{id:"RU006",nama:"Fikri Ramadhan",kelas:"1 Ulya"},
+{id:"RU007",nama:"M. Ilham",kelas:"1 Ulya"},
+{id:"RU008",nama:"Zainal Abidin",kelas:"2 Ulya"},
+{id:"RU009",nama:"Rafi Ahmad",kelas:"2 Ulya"},
+{id:"RU010",nama:"Aminullah",kelas:"3 Ulya"}
+];
+let state={};
+const key=()=>`absen:${tanggal.value}:${kegiatan.value}`;
+function load(){state=JSON.parse(localStorage.getItem(key())||"{}");render()}
+function save(){localStorage.setItem(key(),JSON.stringify(state))}
+function scanSantri(){
+ const id=scan.value.trim().toUpperCase(); const s=santri.find(x=>x.id===id);
+ if(!s){msg.textContent="❌ ID tidak ditemukan.";return}
+ state[id]="Hadir"; save(); scan.value=""; msg.textContent=`✅ ${s.nama} tercatat HADIR.`; render();
+}
+function status(id){return state[id]||"Belum"}
+function render(){
+ const q=cari.value.toLowerCase(); const rows=santri.filter(s=>(s.nama+" "+s.id+" "+s.kelas).toLowerCase().includes(q));
+ list.innerHTML=rows.map(s=>`<tr><td><b>${s.nama}</b><br><span class="muted">${s.id}</span></td><td>${s.kelas}</td><td><span class="badge ${status(s.id)}">${status(s.id)}</span></td><td><button onclick="setOne('${s.id}','Hadir')">Hadir</button><br><br><button class="btn2" onclick="setOne('${s.id}','Sakit')">Sakit</button><br><br><button class="btn2" onclick="setOne('${s.id}','Izin')">Izin</button></td></tr>`).join("");
+ total.textContent=santri.length;
+ hadir.textContent=santri.filter(s=>status(s.id)==="Hadir").length;
+ sakit.textContent=santri.filter(s=>status(s.id)==="Sakit").length;
+ izin.textContent=santri.filter(s=>status(s.id)==="Izin").length;
+ alpa.textContent=santri.filter(s=>status(s.id)==="Alpa").length;
+}
+function setOne(id,v){state[id]=v;save();render()}
+function setUnscanned(v){santri.forEach(s=>{if(!state[s.id])state[s.id]=v});save();render()}
+tanggal.value=new Date().toISOString().slice(0,10);
+kegiatan.addEventListener("change",load); tanggal.addEventListener("change",load);
+load();
+</script>
+</body>
+</html>
